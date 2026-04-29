@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Martingale Tracker (Risk Locked)</title>
+
+<style>
+body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
+    background: #0f172a;
+    color: white;
+    padding: 16px;
+}
+
+.container {
+    max-width: 520px;
+    margin: auto;
+}
+
+.card {
+    background: #1e293b;
+    padding: 14px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+}
+
+input, button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    border-radius: 8px;
+    border: none;
+    font-size: 16px;
+}
+
+button {
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.win { background: #22c55e; }
+.loss { background: #ef4444; }
+
+.stats {
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.locked {
+    color: #fbbf24;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 10px;
+}
+
+table {
+    width: 100%;
+    font-size: 12px;
+    margin-top: 10px;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 6px;
+    text-align: center;
+}
+
+th {
+    background: #334155;
+}
+
+tr:nth-child(even) {
+    background: #1e293b;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>📊 Martingale Risk Tracker</h2>
+
+<div class="card">
+
+    <label>Bankroll</label>
+    <input id="bankroll" type="number" value="1000">
+
+    <label>Risk %</label>
+    <input id="riskPercent" type="number" value="2">
+
+    <button onclick="init()">Initialize</button>
+
+</div>
+
+<div class="card stats" id="stats"></div>
+
+<div class="card">
+    <button class="win" id="winBtn" onclick="trade(true)">✔ WIN</button>
+    <button class="loss" id="lossBtn" onclick="trade(false)">❌ LOSS</button>
+
+    <div id="lockMsg" class="locked"></div>
+</div>
+
+<div class="card" id="tableBox"></div>
+
+</div>
+
+<script>
+
+let bankroll = 0;
+let startBet = 0;
+let currentBet = 0;
+
+let trades = [];
+let lossStreak = 0;
+let locked = false;
+
+function init() {
+
+    bankroll = +document.getElementById("bankroll").value;
+    const risk = +document.getElementById("riskPercent").value;
+
+    startBet = bankroll * (risk / 100);
+    currentBet = startBet;
+
+    trades = [];
+    lossStreak = 0;
+    locked = false;
+
+    updateUI();
+}
+
+function trade(win) {
+
+    if (locked) return;
+
+    if (win) {
+
+        bankroll += currentBet;
+        currentBet = startBet;
+        lossStreak = 0;
+
+        trades.push({
+            result: "WIN",
+            bet: currentBet,
+            bankroll
+        });
+
+    } else {
+
+        bankroll -= currentBet;
+        currentBet *= 2;
+        lossStreak++;
+
+        trades.push({
+            result: "LOSS",
+            bet: currentBet / 2,
+            bankroll
+        });
+
+        // 🚨 LOCK after 3 losses in a row
+        if (lossStreak >= 3) {
+            locked = true;
+        }
+    }
+
+    updateUI();
+}
+
+function updateUI() {
+
+    document.getElementById("stats").innerHTML = `
+        💰 Bankroll: $${bankroll.toFixed(2)} <br>
+        🎯 Current Bet: $${currentBet.toFixed(2)} <br>
+        🔁 Loss Streak: ${lossStreak} <br>
+        📊 Trades: ${trades.length}
+    `;
+
+    if (locked) {
+        document.getElementById("lockMsg").innerText =
+            "🚨 STOP: 3 consecutive losses — rethink strategy before continuing";
+    } else {
+        document.getElementById("lockMsg").innerText = "";
+    }
+
+    document.getElementById("winBtn").disabled = locked;
+    document.getElementById("lossBtn").disabled = locked;
+
+    renderTable();
+}
+
+function renderTable() {
+
+    let html = `
+    <table>
+        <tr>
+            <th>#</th>
+            <th>Result</th>
+            <th>Bet</th>
+            <th>Bankroll</th>
+        </tr>
+    `;
+
+    trades.slice().reverse().forEach((t, i) => {
+        html += `
+        <tr>
+            <td>${trades.length - i}</td>
+            <td style="color:${t.result === 'WIN' ? '#22c55e' : '#ef4444'}">
+                ${t.result}
+            </td>
+            <td>$${t.bet.toFixed(2)}</td>
+            <td>$${t.bankroll.toFixed(2)}</td>
+        </tr>`;
+    });
+
+    html += "</table>";
+
+    document.getElementById("tableBox").innerHTML = html;
+}
+
+</script>
+
+</body>
+</html>
